@@ -1,13 +1,13 @@
-**Project Brief: NavNest - A Family Task Organizer for Neurodivergent Households**
+**Project Brief: Messy - A Family Task Organizer for Neurodivergent Households**
 
 ---
 
-**Project Name:** NavNest
+**Project Name:** Messy Mind
 
 **Project Type:** Mobile-First Progressive Web App (PWA)
 
 **Primary Goal:**
-To provide a structured, sensory-considerate, and user-friendly task management tool for families with neurodivergent members. NavNest enables parents to assign and monitor tasks while allowing children to engage with daily routines in a clear, visual, and positive way.
+To provide a structured, sensory-considerate, and user-friendly task management tool for families with neurodivergent members. Messy Mind enables parents to assign and monitor tasks while allowing children to engage with daily routines in a clear, visual, and positive way.
 
 ---
 

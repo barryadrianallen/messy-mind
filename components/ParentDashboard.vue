@@ -3,13 +3,46 @@
     <!-- Header -->
     <header class="flex justify-between items-center mb-8">
       <h1 class="text-2xl font-bold text-gray-800">Parent Dashboard</h1>
-      <div class="flex space-x-2">
-        <button class="p-2 rounded-lg bg-white shadow-sm hover:bg-gray-100">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37 1 .608 2.296.07 2.572-1.065z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </button>
+      <div class="flex space-x-2 items-center">
+        <!-- Settings Button and Dropdown -->
+        <div class="relative">
+          <button 
+            @click="toggleSettingsMenu"
+            class="p-2 rounded-lg bg-white shadow-sm hover:bg-gray-100"
+            aria-label="Settings"
+            aria-haspopup="true"
+            :aria-expanded="showSettingsMenu.toString()"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37 1 .608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+          <!-- Settings Dropdown Menu -->
+          <div 
+            v-if="showSettingsMenu"
+            class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50" role="menu" aria-orientation="vertical" aria-labelledby="menu-button" tabindex="-1"
+          >
+            <div class="py-1" role="none">
+              <!-- Family Settings -->
+              <button @click="openFamilySettings" class="text-gray-700 group flex items-center px-4 py-2 text-sm w-full text-left hover:bg-gray-100 hover:text-gray-900" role="menuitem" tabindex="-1" id="menu-item-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Family Settings
+              </button>
+              <!-- Theme Settings -->
+              <button @click="openThemeSettings" class="text-gray-700 group flex items-center px-4 py-2 text-sm w-full text-left hover:bg-gray-100 hover:text-gray-900" role="menuitem" tabindex="-1" id="menu-item-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                </svg>
+                Theme Settings
+              </button>
+            </div>
+          </div>
+        </div>
+
         <button 
           @click="logout" 
           class="p-2 rounded-lg bg-white shadow-sm hover:bg-gray-100 hover:text-red-500 transition-colors"
@@ -85,7 +118,8 @@ export default {
         { id: 2, childId: 1, title: 'Make bed', description: 'After waking up', completed: true },
         { id: 3, childId: 2, title: 'Practice piano', description: '30 minutes', completed: false },
       ],
-      nextTaskId: 4
+      nextTaskId: 4,
+      showSettingsMenu: false
     }
   },
   computed: {
@@ -124,6 +158,19 @@ export default {
     logout() {
       // Navigate to home/login page
       this.$router.push('/login')
+    },
+    toggleSettingsMenu() {
+      this.showSettingsMenu = !this.showSettingsMenu;
+    },
+    openThemeSettings() {
+      console.log('Open Theme Settings');
+      this.showSettingsMenu = false; // Close menu after selection
+      this.$router.push({ path: '/family-settings', query: { tab: 'themes' } });
+    },
+    openFamilySettings() {
+      console.log('Open Family Settings');
+      this.showSettingsMenu = false; // Close menu after selection
+      this.$router.push({ path: '/family-settings', query: { tab: 'familyMembers' } }); // Explicitly set tab
     }
   }
 }

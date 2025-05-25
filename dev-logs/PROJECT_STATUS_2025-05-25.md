@@ -39,7 +39,19 @@
     - `ChildTaskItem.vue`: Removed task icons to improve visual consistency across the task list. This change was propagated to `ChildDashboard.vue`.
 - **Code Refactoring:**
     - `ChildDashboard.vue`: Externalized initial mock data (child name and task list) to `data/mockChildDashboardData.js` for better organization and maintainability.
-- **Test Status:** All 68 tests are currently passing.
+- **Family Settings Testing & Routing Refactor:**
+    - **Test Fixes (`family-settings.test.js`):**
+        - Resolved `TypeError: Cannot read properties of undefined (reading 'query')` by correctly mocking `$route` in test setup.
+        - Addressed `Cannot call trigger on an empty DOMWrapper` errors by:
+            - Adding `data-testid` attributes to interactive elements in `FamilySettings.vue` (toggle advanced options button, delete family button, danger zone container) for reliable selection.
+            - Updating test selectors to use these `data-testid` attributes.
+        - Mocked `window.alert` to suppress "Not implemented" errors from jsdom during tests, resulting in cleaner test output.
+    - **Dashboard Routing Refactor:**
+        - Renamed `pages/parent.vue` to `pages/parent-dashboard.vue`.
+        - Renamed `pages/child.vue` to `pages/child-dashboard.vue`.
+        - Updated `pages/login.vue` to use `navigateTo` for routing to the new `/parent-dashboard` and `/child-dashboard` paths.
+        - Removed unused `useRouter` import from `login.vue`.
+    - **Test Status:** All 74 tests are now passing.
 
 ## 4. Current State & Next Steps
 - The core UI for parent and child task management is in place.

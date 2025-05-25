@@ -67,6 +67,65 @@
               @delete="handleDeleteMember"
             />
           </div>
+
+          <!-- Advanced Options Toggle -->
+          <div class="mt-8 pt-6 border-t border-gray-200">
+            <button 
+              @click="showAdvancedOptions = !showAdvancedOptions"
+              data-testid="toggle-advanced-options-btn"
+              class="w-full md:w-auto flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" :class="['h-5 w-5 mr-2 text-gray-500 transform transition-transform duration-150', showAdvancedOptions ? 'rotate-180' : '']" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+              {{ showAdvancedOptions ? 'Hide' : 'Show' }} Advanced Options
+            </button>
+          </div>
+
+          <!-- Danger Zone - Conditionally shown -->
+          <div 
+            v-if="showAdvancedOptions" 
+            data-testid="danger-zone-container"
+            class="mt-6 p-6 bg-red-50 border border-red-200 rounded-lg"
+          >
+            <div class="flex items-start">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div>
+                <h3 class="text-xl font-semibold text-red-700">Advanced Options</h3>
+                <p class="text-sm text-red-600 mt-1 mb-4">Permanently delete your family and all associated data. This action cannot be undone.</p>
+              </div>
+            </div>
+            
+            <div class="bg-white p-4 rounded-md border border-red-300 mb-6">
+              <h4 class="text-md font-semibold text-gray-800 mb-2">What will be deleted:</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>All family member accounts ({{ familyMembers.length }} account{{ familyMembers.length !== 1 ? 's' : '' }})</li>
+                <li>All tasks and task history (approximately {{ familyMembers.filter(m => m.role === 'Child').length * 10 }} tasks)</li> <!-- Placeholder for task count -->
+                <li>All points and achievements ({{ (familyStats.find(stat => stat.label === 'Total Points') || {value: 0}).value }} total points)</li>
+                <li>All family settings and preferences</li>
+                <li>All login credentials and access for this family</li>
+              </ul>
+            </div>
+
+            <button 
+              @click="deleteEntireFamily"
+              data-testid="delete-entire-family-btn"
+              class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-red-700 flex items-center justify-center text-lg transition-colors duration-150 shadow-md hover:shadow-lg"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Delete Entire Family
+            </button>
+            <button 
+              @click="showAdvancedOptions = false"
+              class="w-full mt-3 text-sm text-gray-600 hover:text-gray-800 py-2 rounded-lg hover:bg-gray-100 transition-colors duration-150"
+            >
+              Hide Advanced Options
+            </button>
+          </div>
         </section>
 
         <!-- Family Statistics Section -->
@@ -130,6 +189,7 @@ export default {
     return {
       activeTab: 'familyMembers', 
       isAddMemberModalVisible: false, 
+      showAdvancedOptions: false, 
       familyMembers: [
         {
           id: 1,
@@ -195,13 +255,25 @@ export default {
       console.log('Edit member with ID:', memberId);
     },
     handleDeleteMember(memberId) {
-      console.log('Delete member with ID:', memberId);
-      this.familyMembers = this.familyMembers.filter(m => m.id !== memberId);
-      this.updateFamilyStats(); 
+      if (confirm('Are you sure you want to remove this family member? This will also remove their associated data in the future.')) {
+        console.log('Delete member with ID:', memberId);
+        this.familyMembers = this.familyMembers.filter(m => m.id !== memberId);
+        this.updateFamilyStats(); 
+      }
     },
-    selectTheme(theme) {
-      this.selectedTheme = theme;
-      console.log('Selected theme:', theme.name);
+    addNewFamilyMember(newMemberData) {
+      const newId = this.familyMembers.length > 0 ? Math.max(...this.familyMembers.map(m => m.id)) + 1 : 1;
+      const memberToAdd = {
+        id: newId,
+        ...newMemberData,
+        // Add default stats if not provided by modal, e.g., level, points
+        level: newMemberData.level || (newMemberData.role === 'Child' ? 1 : 0),
+        points: newMemberData.points || 0,
+        avatarInitial: newMemberData.name ? newMemberData.name.charAt(0).toUpperCase() : '?'
+      };
+      this.familyMembers.push(memberToAdd);
+      this.isAddMemberModalVisible = false;
+      this.updateFamilyStats();
     },
     openAddMemberModal() {
       this.isAddMemberModalVisible = true;
@@ -209,34 +281,37 @@ export default {
     closeAddMemberModal() {
       this.isAddMemberModalVisible = false;
     },
-    addNewFamilyMember(memberData) {
-      const newMember = {
-        id: Date.now(), 
-        name: memberData.fullName,
-        age: memberData.age !== undefined ? memberData.age : null, 
-        username: memberData.username,
-        level: memberData.role === 'Child' ? 1 : 0, 
-        points: 0,
-        role: memberData.role,
-        avatarInitial: memberData.fullName ? memberData.fullName.charAt(0).toUpperCase() : '?'
-      };
-      this.familyMembers.push(newMember);
-      this.updateFamilyStats(); 
-      // this.closeAddMemberModal(); 
+    selectTheme(theme) {
+      this.selectedTheme = theme;
+      console.log('Selected theme:', theme.name);
+      // Future: Apply theme globally
     },
     updateFamilyStats() {
-      const childrenCount = this.familyMembers.filter(m => m.role === 'Child').length;
-      const parentCount = this.familyMembers.filter(m => m.role === 'Parent').length;
-      const totalPoints = this.familyMembers.reduce((sum, m) => sum + (m.points || 0), 0);
-      const highestLevel = Math.max(0, ...this.familyMembers.map(m => m.level || 0));
+      const children = this.familyMembers.filter(m => m.role === 'Child');
+      const parents = this.familyMembers.filter(m => m.role === 'Parent');
+      const totalPoints = children.reduce((sum, child) => sum + (child.points || 0), 0);
+      const highestLevel = children.length > 0 ? Math.max(...children.map(child => child.level || 0)) : 0;
 
       this.familyStats = [
-        { label: 'Children', value: childrenCount },
-        { label: 'Parents', value: parentCount },
+        { label: 'Children', value: children.length },
+        { label: 'Parents', value: parents.length },
         { label: 'Total Points', value: totalPoints },
         { label: 'Highest Level', value: highestLevel }
       ];
+    },
+    deleteEntireFamily() {
+      if (confirm('ARE YOU ABSOLUTELY SURE? This will delete the entire family and all associated data. This action cannot be undone.')) {
+        if (confirm('SECOND CONFIRMATION: Please confirm you want to delete all family data.')) {
+          console.log('Deleting entire family...');
+          this.familyMembers = [];
+          this.updateFamilyStats();
+          // Later: Add API call to Supabase to delete all family data from the backend
+          alert('Entire family data has been removed locally. Backend integration for full deletion is pending.');
+        }
+      }
     }
+  },
+  watch: {
   },
   created() {
     this.updateFamilyStats();

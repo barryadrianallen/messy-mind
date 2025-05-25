@@ -1,0 +1,108 @@
+
+Privacy Policy
+
+Effective Date: May 24, 2025
+
+At Messy Mind, we take your privacy seriously. This Privacy Policy explains how we collect, use, and protect your information when you use our family task manager web application (the “Service”).
+
+We are committed to complying with the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018.
+
+1. Who We Are
+Messy Mind is a family task management app designed to help parents and children collaborate and organize daily activities. We act as the data controller of the information you provide when using the Service.
+
+If you have questions about this policy, contact us at:
+Email: messymindhelp@gmail.com
+
+2. What Information We Collect
+
+a. Account Information
+When a parent registers:
+- Name
+- Email address
+- Encrypted password
+- Family name
+
+b. Family Member Data
+Parents may create accounts for:
+- Children (name, nickname, optional avatar or PIN)
+- Partners (name and email for invitation)
+
+Note: Only adults may create accounts; children do not self-register.
+
+c. Task and Usage Data
+- Task titles, statuses, and assignees
+- Progress and completion data
+- Family association and user roles
+
+d. Technical Data
+We automatically collect:
+- Device/browser type
+- IP address (used for security and fraud prevention)
+- Usage logs (errors, crashes)
+
+3. Legal Basis for Processing
+We collect and process your data under the following legal bases:
+- Performance of a contract (e.g., delivering the Service)
+- Consent (e.g., when a parent creates an account for a child)
+- Legitimate interest (e.g., maintaining system security)
+
+4. Children’s Privacy
+In accordance with UK GDPR:
+- We do not allow users under 13 to register directly.
+- All child data is entered and managed by a verified parent or guardian.
+- Child accounts are used only within the family group for task assignment and progress tracking.
+
+5. How We Use Your Data
+We use the information we collect to:
+- Provide and improve the Service
+- Allow parents to manage tasks and track progress
+- Personalize user experience
+- Respond to support requests and bug reports
+
+We do not sell or rent your data to third parties.
+
+6. Where Your Data Is Stored
+We use Supabase, a secure backend-as-a-service provider that hosts your data on servers located in the European Union (EU).
+
+- Supabase is fully UK GDPR-compliant.
+- Data is encrypted in transit and at rest.
+- Access is controlled through secure authentication and role-based permissions.
+
+More on Supabase privacy: https://supabase.com/privacy
+
+7. How Long We Keep Your Data
+We keep your personal and task data for as long as your account is active. If you delete your account, your data will be removed from our systems within 30 days, unless legally required to retain it.
+
+8. Your Rights Under UK GDPR
+You have the right to:
+- Access the personal data we hold about you
+- Correct inaccuracies in your data
+- Delete your data ("right to be forgotten")
+- Object to certain types of data use
+- Withdraw consent at any time, where applicable
+
+To exercise these rights, please contact us at messymindhelp@gmail.com.
+
+9. Data Security
+We use industry-standard security measures, including:
+- Encrypted connections (TLS)
+- Authentication tokens
+- Role-based access for families and users
+
+We continuously review and improve our security measures to protect your data.
+
+10. Third-Party Services
+We only use trusted, GDPR-compliant services:
+- Supabase – backend storage and authentication
+- Optional integrations (e.g., email delivery, error logging) may also process data solely to support the app
+
+11. Updates to This Policy
+We may update this policy as the Service evolves. If we make material changes, we will notify you via email or in-app notice.
+
+12. Contact Us
+If you have questions or concerns about your data or this policy, contact:
+
+Messy Mind Support
+Email: messymindhelp@gmail.com
+
+By using Messy Mind, you consent to the collection and use of your information as described in this Privacy Policy.

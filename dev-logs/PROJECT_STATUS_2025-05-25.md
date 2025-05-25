@@ -53,6 +53,60 @@
         - Removed unused `useRouter` import from `login.vue`.
     - **Test Status:** All 74 tests are now passing.
 
+### Supabase Authentication Integration (New)
+
+- **Parent Signup Flow:**
+    - Successfully implemented parent signup using email and password via `pages/login.vue`.
+    - Integrated Supabase client (`$supabase.auth.signUp` accessed via `useNuxtApp()`).
+    - User data (`full_name`, `username`, `role='parent'`) is passed in `options.data` during signup. This data is used by the `handle_new_user` SQL trigger function to populate the `public.profiles` table from `NEW.raw_user_meta_data`.
+    - Resolved database error (`CHECK constraint violation` on `role` column) during signup by ensuring the `role` value sent from the frontend ('parent') matches the allowed values in the `profiles` table.
+- **Email Confirmation:**
+    - Email confirmation is active (configured via `enable_confirmations = true` in `supabase/config.toml` for local dev and Supabase project settings). Users receive a confirmation email upon signup.
+    - Resolved 404 error after clicking the confirmation link:
+        - The `site_url` in `supabase/config.toml` (`http://localhost:3000`) is used as the base for the confirmation redirect.
+        - Created `pages/index.vue` which now redirects users from the root (`/`) to `/login`. This handles the default Supabase redirect after email confirmation.
+    - Replaced the `alert()` after signup with a dedicated page (`pages/please-confirm.vue`) instructing users to check their email, improving UX. Navigation to this page is handled in `pages/login.vue`.
+- **Parent Login Flow:**
+    - Parent login with email and password is functional in `pages/login.vue` using `$supabase.auth.signInWithPassword`.
+    - Users are redirected to `/parent-dashboard` upon successful login.
+- **Supabase Client Initialization & Configuration:**
+    - Supabase client is initialized via a Nuxt plugin: `plugins/supabase.client.js`.
+    - The client instance is available globally in Vue components as `$supabase` (accessed via `const { $supabase } = useNuxtApp();`).
+    - This plugin uses `useRuntimeConfig()` to fetch `NUXT_PUBLIC_SUPABASE_URL` and `NUXT_PUBLIC_SUPABASE_ANON_KEY` from the `.env` file.
+    - The old `utils/supabase.js` file was removed.
+    - Local Supabase services (Docker) are configured via `supabase/config.toml`. Key settings touched: `[auth] site_url`, `[auth.email] enable_confirmations, enable_signup`.
+- **Database Schema (`public.profiles`):**
+    - The `profiles` table is linked to `auth.users` via a foreign key (`id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE`).
+    - It includes columns for `full_name`, `username` (unique), and `role` (with a `CHECK` constraint for 'parent' or 'child').
+    - Row Level Security (RLS) is enabled, with policies allowing users to read/update their own profiles.
+    - The `handle_new_user` trigger function (SECURITY DEFINER) automatically creates a profile entry upon new user creation in `auth.users`.
+- **Error Handling & Debugging:**
+    - Addressed JavaScript syntax errors (e.g., TypeScript `as Error` in JS).
+    - Resolved Supabase config parsing errors in `config.toml`.
+    - Guided on deleting test users from Supabase Studio (Authentication tab or SQL Editor) to allow email reuse during testing.
+    - Resolved Docker daemon connection issues by ensuring Docker Desktop was running.
+
+---
+**Key Context for Cascade (Future Sessions):**
+-   **Authentication Entry Point:** `pages/login.vue` handles both parent login and signup.
+-   **Supabase Client Access:** Use `const { $supabase } = useNuxtApp();` within Vue `setup` functions.
+-   **Profile Data:** New user profile data (`full_name`, `username`, `role`) is passed via `signUp` options and handled by the `handle_new_user` SQL trigger. Changes to profile fields will require updating this trigger or the `profiles` table schema (`supabase/migrations/...create_profiles_table.sql`).
+-   **Local Supabase Config:** Changes to auth behavior (redirects, email settings for local dev) are often managed in `supabase/config.toml`. Remember to `supabase stop` and `supabase start` for these to apply.
+-   **Environment Variables:** `NUXT_PUBLIC_SUPABASE_URL` and `NUXT_PUBLIC_SUPABASE_ANON_KEY` are critical and defined in `.env`.
+-   **Key Files for Auth:**
+    -   `pages/login.vue` (UI and core auth logic)
+    -   `plugins/supabase.client.js` (Supabase client initialization)
+    -   `supabase/config.toml` (Local Supabase service configuration)
+    -   `supabase/migrations/*_create_profiles_table.sql` (Database schema for profiles and related triggers)
+    -   `pages/please-confirm.vue` (Post-signup email confirmation instruction page)
+    -   `pages/index.vue` (Root page, redirects to `/login`)
+
+**Next Steps (Outstanding - related to Auth):**
+-   Implement route protection/middleware for `/parent-dashboard` and other authenticated routes (e.g., using `onAuthStateChange` or a Nuxt middleware checking `supabase.auth.getUser()`).
+-   Create the actual `/parent-dashboard` page content and functionality.
+-   Design and implement Child login functionality (currently a placeholder in `login.vue`). This will likely require schema changes (e.g., PIN storage) and new RLS policies.
+-   Further UI/UX refinements across the authentication flow.
+
 ## 4. Current State & Next Steps
 - The core UI for parent and child task management is in place.
 - Family member management and theme selection UIs are functional at a basic level.

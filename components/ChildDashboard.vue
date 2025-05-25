@@ -37,7 +37,6 @@
           :title="task.title"
           :description="task.description"
           :completed="task.completed"
-          :icon="task.icon"
           @toggle-completion="toggleTaskCompletion(task.id)"
         />
       </div>
@@ -51,6 +50,7 @@
 <script>
 import ProgressBar from './ProgressBar.vue'
 import ChildTaskItem from './ChildTaskItem.vue'
+import { initialChildName, initialTasks } from '../data/mockChildDashboardData.js';
 
 export default {
   name: 'ChildDashboard',
@@ -60,38 +60,8 @@ export default {
   },
   data() {
     return {
-      childName: 'Alex',
-      childId: 1,
-      tasks: [
-        { 
-          id: 1, 
-          title: 'Brush teeth', 
-          description: 'Morning and evening', 
-          completed: false,
-          icon: 'brush'
-        },
-        { 
-          id: 2, 
-          title: 'Make bed', 
-          description: 'After waking up', 
-          completed: false,
-          icon: 'bed'
-        },
-        {
-          id: 3,
-          title: 'Get dressed',
-          description: "Put on today's clothes",
-          completed: true,
-          icon: 'clothes'
-        },
-        {
-          id: 4,
-          title: 'Eat breakfast',
-          description: 'Have a healthy meal',
-          completed: true,
-          icon: 'food'
-        }
-      ]
+      childName: initialChildName,
+      tasks: initialTasks.map(task => ({ ...task })) 
     }
   },
   computed: {

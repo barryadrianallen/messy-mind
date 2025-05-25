@@ -7,7 +7,8 @@
       <div>
         <h3 class="font-semibold text-gray-800">{{ member.name }}</h3>
         <p class="text-xs text-gray-500">
-          Age: {{ member.age }} &bull; @{{ member.username }}
+          <span v-if="member.role === 'Child'">Age: {{ member.age }} &bull; </span>
+          @{{ member.username }}
         </p>
         <div class="mt-1 flex space-x-2 flex-wrap">
           <span class="px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">Level {{ member.level }}</span>

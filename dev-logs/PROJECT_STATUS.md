@@ -69,7 +69,7 @@ messy-mind/
 ├── utils/
 │   └── taskUtils.js          # Shared task utilities
 └── app.vue                   # Main app component
-├── nuxt.config.ts         # Nuxt configuration
+├── nuxt.config.js         # Nuxt configuration
 ├── package.json
 ├── package-lock.json
 ├── pages/
@@ -82,7 +82,6 @@ messy-mind/
 ### Technical Stack
 - **Framework**: Nuxt 3
 - **Styling**: Tailwind CSS
-- **Language**: TypeScript
 - **Package Manager**: npm
 
 ### Dependencies

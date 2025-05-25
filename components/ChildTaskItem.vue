@@ -14,9 +14,6 @@
         </svg>
       </button>
 
-      <!-- Task Icon -->
-      <span class="text-2xl mr-3">{{ taskIcon }}</span>
-      
       <!-- Task Details -->
       <div>
         <p :class="['text-lg font-medium', completed ? 'text-gray-500 line-through' : 'text-gray-900']">
@@ -59,24 +56,6 @@ export default {
     completed: {
       type: Boolean,
       default: false
-    },
-    icon: {
-      type: String,
-      default: '📝'
-    }
-  },
-  computed: {
-    taskIcon() {
-      // Map task types to appropriate emojis
-      const iconMap = {
-        'brush': '🪥',
-        'bed': '🛏️',
-        'clothes': '👕',
-        'food': '🥣',
-        'default': '📝'
-      };
-      
-      return iconMap[this.icon] || iconMap.default;
     }
   },
   emits: ['toggle-completion']

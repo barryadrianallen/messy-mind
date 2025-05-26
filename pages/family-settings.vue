@@ -50,7 +50,11 @@
               <h2 class="text-xl font-semibold text-gray-800">Family Members</h2>
               <p class="text-sm text-gray-500">Manage your family members and their access to the task manager</p>
             </div>
-            <button @click="openAddMemberModal" class="bg-blue-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center text-sm">
+            <button 
+              v-if="familyMembers.length > 0" 
+              @click="openAddMemberModal" 
+              class="bg-blue-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center text-sm"
+            >
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
               </svg>
@@ -58,7 +62,7 @@
             </button>
           </div>
           <!-- Member List -->
-          <div class="space-y-3">
+          <div v-if="familyMembers.length > 0" class="space-y-3">
             <FamilyMemberItem
               v-for="member in familyMembers"
               :key="member.id"
@@ -66,6 +70,21 @@
               @edit="handleEditMember"
               @delete="handleDeleteMember"
             />
+          </div>
+          <div v-else class="text-center py-8 px-4 bg-gray-50 rounded-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0zM17 20v1m0-1c0-2.21-.896-4.21-2.343-5.657M12 21v-1m0 1c0-2.21.896-4.21 2.343-5.657m-4.686 0A2.25 2.25 0 017.5 15.75v-1.5a2.25 2.25 0 012.25-2.25h1.5A2.25 2.25 0 0113.5 14.25v1.5a2.25 2.25 0 01-2.25 2.25h-1.5z" />
+            </svg>
+            <h3 class="mt-2 text-lg font-medium text-gray-900">No family members yet</h3>
+            <p class="text-sm text-gray-500 mb-4">Get started by adding a parent or child to your family.</p>
+            <div class="mt-6">
+              <button @click="openAddMemberModal" type="button" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Family Member
+              </button>
+            </div>
           </div>
 
           <!-- Advanced Options Toggle -->
@@ -178,6 +197,8 @@
 <script>
 import FamilyMemberItem from '~/components/FamilyMemberItem.vue';
 import AddMemberModal from '~/components/AddMemberModal.vue';
+import bcrypt from 'bcryptjs'; 
+import { useSupabaseUser } from '#imports'; 
 
 export default {
   name: 'FamilySettingsPage',
@@ -185,48 +206,23 @@ export default {
     FamilyMemberItem,
     AddMemberModal
   },
+  setup() {
+    const parentUser = useSupabaseUser(); // Call composable here
+    return {
+      parentUser // Expose to the component instance (will be reactive)
+    };
+  },
   data() {
     return {
-      activeTab: 'familyMembers', 
-      isAddMemberModalVisible: false, 
-      showAdvancedOptions: false, 
-      familyMembers: [
-        {
-          id: 1,
-          name: 'Alex',
-          age: 8,
-          username: 'alex_tasks',
-          level: 3,
-          points: 275,
-          role: 'Child',
-          avatarInitial: 'A'
-        },
-        {
-          id: 2,
-          name: 'Sam',
-          age: 10,
-          username: 'sam_tasks',
-          level: 2,
-          points: 190,
-          role: 'Child',
-          avatarInitial: 'S'
-        },
-        {
-          id: 3,
-          name: 'Sarah',
-          age: 35,
-          username: 'sarah_parent',
-          level: 0, 
-          points: 0,
-          role: 'Parent',
-          avatarInitial: 'S'
-        }
-      ],
+      activeTab: 'familyMembers', // 'familyMembers' or 'themes'
+      isAddMemberModalVisible: false,
+      showAdvancedOptions: false,
+      familyMembers: [], // Initialize as empty array
       familyStats: [
-        { label: 'Children', value: 2 },
-        { label: 'Parents', value: 1 },
-        { label: 'Total Points', value: 465 },
-        { label: 'Highest Level', value: 3 }
+        { label: 'Children', value: 0 }, // Default to 0
+        { label: 'Parents', value: 0 },  // Default to 0
+        { label: 'Total Points', value: 0 },
+        { label: 'Highest Level', value: 0 }
       ],
       themes: [
         { name: 'Default', colorClass: 'bg-black', activeClass: 'bg-blue-600 text-white border-blue-700' },
@@ -258,20 +254,66 @@ export default {
       if (confirm('Are you sure you want to remove this family member? This will also remove their associated data in the future.')) {
         console.log('Delete member with ID:', memberId);
         this.familyMembers = this.familyMembers.filter(m => m.id !== memberId);
-        this.updateFamilyStats(); 
+        this.updateFamilyStats();
       }
     },
     addNewFamilyMember(newMemberData) {
-      const newId = this.familyMembers.length > 0 ? Math.max(...this.familyMembers.map(m => m.id)) + 1 : 1;
-      const memberToAdd = {
-        id: newId,
-        ...newMemberData,
-        // Add default stats if not provided by modal, e.g., level, points
-        level: newMemberData.level || (newMemberData.role === 'Child' ? 1 : 0),
-        points: newMemberData.points || 0,
-        avatarInitial: newMemberData.name ? newMemberData.name.charAt(0).toUpperCase() : '?'
+      // Access parentUser via 'this.parentUser' (it's automatically unwrapped from the Ref)
+      const parentId = this.parentUser ? this.parentUser.id : null;
+
+      if (!parentId) {
+        console.error('Parent user ID not found. Cannot add family member.');
+        // Optionally, show an error message to the user
+        alert('Error: Could not identify the current user. Please try logging in again.');
+        return;
+      }
+
+      const localId = this.familyMembers.length > 0 ? Math.max(...this.familyMembers.map(m => m.id)) + 1 : 1;
+      
+      let hashedPin = undefined;
+      if (newMemberData.role === 'Child' && newMemberData.pin) {
+        const salt = bcrypt.genSaltSync(10);
+        hashedPin = bcrypt.hashSync(newMemberData.pin, salt);
+      }
+
+      // This is the object we'd eventually save to Supabase for the 'profiles' table
+      const profileDataForSupabase = {
+        // id: will come from the new auth.users entry for the child, or parentId if it's the parent's own profile update
+        full_name: newMemberData.fullName,
+        username: newMemberData.username,
+        role: newMemberData.role,
+        avatar_url: null, // Or some default
+        // Specific to child
+        ...(newMemberData.role === 'Child' && {
+          hashed_pin: hashedPin,
+          managed_by_user_id: parentId 
+          // 'age' is not in the profiles table, handle separately if needed elsewhere
+        })
       };
-      this.familyMembers.push(memberToAdd);
+
+      // For parent's own profile (if we were editing/creating it here), managed_by_user_id might be null or parentId
+      if (newMemberData.role === 'Parent') {
+        // profileDataForSupabase.id = parentId; // Assuming parent is editing their own profile
+        // profileDataForSupabase.managed_by_user_id = null; // Or parentId
+      }
+
+      console.log('Data to be sent to Supabase for profiles table:', profileDataForSupabase);
+      // TODO: Implement actual Supabase call to create auth.user for child (if new) and insert/update profileDataForSupabase
+
+      // For local display, we still add to the familyMembers array with some local data structure
+      const memberToAddLocally = {
+        id: localId, // Local temporary ID for the list
+        name: newMemberData.fullName,
+        username: newMemberData.username,
+        role: newMemberData.role,
+        age: newMemberData.role === 'Child' ? newMemberData.age : undefined,
+        // We don't store raw pin or hashedPin directly in the local display list for long term
+        // but it's good to know it was processed if debugging.
+        // avatarInitial is purely for display
+        avatarInitial: newMemberData.fullName ? newMemberData.fullName.charAt(0).toUpperCase() : '?'
+      };
+
+      this.familyMembers.push(memberToAddLocally);
       this.isAddMemberModalVisible = false;
       this.updateFamilyStats();
     },

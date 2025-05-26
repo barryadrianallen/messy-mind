@@ -208,232 +208,197 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useNuxtApp } from '#app';
+import { ref, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
 
-const { $supabase } = useNuxtApp();
+const { $supabase } = useNuxtApp(); // Now provided by @nuxtjs/supabase
+const router = useRouter();
+const user = useSupabaseUser();
 
-const userType = ref('');
+// State for user type selection
+const userType = ref(''); // 'parent' or 'child'
+const showUserTypeSelection = ref(true);
+
+// State for login form
 const showLoginForm = ref(false);
-const email = ref(''); // For Parent login (changed from username)
-const username = ref(''); // For Child login (placeholder) / Parent signup username
-const password = ref(''); // For login
-const pin = ref('');      // For login
+const loginEmail = ref('');
+const loginPassword = ref('');
+const loginError = ref('');
 
-// Parent Signup state variables
+// State for signup form
 const showSignupForm = ref(false);
-const signupFullName = ref('');
 const signupEmail = ref('');
-const signupUsername = ref(''); // This is the public username for the profile
-const signupPassword = ref(''); 
+const signupPassword = ref('');
 const signupConfirmPassword = ref('');
-const signupFamilyName = ref(''); // Note: FamilyName is not in profiles table yet
-const signupAgreedToTerms = ref(false);
+const signupError = ref('');
+const signupSuccess = ref('');
 
-// Error message refs
-const signupFullNameError = ref('');
-const signupEmailError = ref('');
-const signupUsernameError = ref('');
-const signupPasswordError = ref('');
-const signupConfirmPasswordError = ref('');
-const signupFamilyNameError = ref('');
-const signupTermsError = ref('');
+// State for child login
+const showChildLoginForm = ref(false);
+const childUsername = ref('');
+const childPin = ref('');
+const childLoginError = ref('');
 
-// Supabase specific state
-const isLoading = ref(false);
-const authError = ref(''); // For displaying errors from Supabase
-
-const resetLoginFields = () => {
-  email.value = ''; // Changed from username
-  username.value = ''; // Kept for child login / parent signup
-  password.value = '';
-  pin.value = '';
-  authError.value = '';
-};
-
-const clearSignupErrors = () => {
-  signupFullNameError.value = '';
-  signupEmailError.value = '';
-  signupUsernameError.value = '';
-  signupPasswordError.value = '';
-  signupConfirmPasswordError.value = '';
-  signupFamilyNameError.value = '';
-  signupTermsError.value = '';
-  authError.value = '';
-};
-
-const resetSignupFields = () => {
-  signupFullName.value = '';
-  signupEmail.value = '';
-  signupUsername.value = '';
-  signupPassword.value = '';
-  signupConfirmPassword.value = '';
-  signupFamilyName.value = '';
-  signupAgreedToTerms.value = false;
-  clearSignupErrors();
-};
+// Watch for user changes (e.g., after login/signup)
+watch(user, (currentUser) => {
+  if (currentUser) {
+    // Determine user role and redirect
+    // This logic might need adjustment based on how roles are stored/fetched
+    // For now, assuming a parent logs in, redirect to parent dashboard
+    // If child login is implemented, redirect to child dashboard
+    if (userType.value === 'parent' || (currentUser.email && !childUsername.value)) {
+      router.push('/parent-dashboard');
+    } else if (userType.value === 'child') {
+      // Add logic to verify child user and redirect to child dashboard
+      // This part is tricky because useSupabaseUser won't reflect a custom child session easily.
+      // For now, direct navigation might be the simplest for the placeholder.
+      router.push('/child-dashboard'); 
+    }
+  } else {
+    // User is logged out, ensure they are on a login/selection page
+    // or handle as per your app's flow
+    if (router.currentRoute.value.path !== '/login' && 
+        router.currentRoute.value.path !== '/' && 
+        !showUserTypeSelection.value && 
+        !showLoginForm.value && 
+        !showSignupForm.value && 
+        !showChildLoginForm.value) {
+      // router.push('/login'); // Or back to user type selection
+    }
+  }
+}, { immediate: true });
 
 const selectUserType = (type) => {
   userType.value = type;
-  showLoginForm.value = true;
-  showSignupForm.value = false;
-  resetLoginFields();
-  resetSignupFields(); 
-};
-
-const prepareSignup = () => {
-  showSignupForm.value = true;
-  showLoginForm.value = false;
-  userType.value = ''; 
-  resetLoginFields();
-  resetSignupFields(); 
-};
-
-const backToInitial = () => {
-  userType.value = '';
-  showLoginForm.value = false;
-  showSignupForm.value = false;
-  resetLoginFields();
-  resetSignupFields(); 
-};
-
-const switchToLogin = () => {
-  showSignupForm.value = false;
-  showLoginForm.value = false; // Will show initial selection
-  userType.value = '';
-  resetLoginFields();
-  resetSignupFields();
-  // To default to Parent login form directly:
-  // selectUserType('Parent'); 
-};
-
-const handleLogin = async () => {
-  authError.value = '';
-  if (userType.value === 'Parent') {
-    if (!email.value || !password.value) {
-      authError.value = 'Email and password are required.';
-      return;
-    }
-    isLoading.value = true;
-    try {
-      const { data, error } = await $supabase.auth.signInWithPassword({
-        email: email.value,
-        password: password.value,
-      });
-      if (error) throw error;
-      console.log('Parent logged in:', data.user);
-      // User session is automatically managed by Supabase client
-      navigateTo('/parent-dashboard'); 
-    } catch (error) { 
-      console.error('Login error:', error);
-      authError.value = error.message || 'Failed to login. Please check your credentials.';
-    } finally {
-      isLoading.value = false;
-    }
-  } else if (userType.value === 'Child') {
-    // Child PIN login logic is not implemented with Supabase yet.
-    // This will require custom implementation (e.g., fetching profile by username, verifying PIN).
-    console.log('Attempting Child login (placeholder):', username.value, 'PIN:', pin.value);
-    authError.value = 'Child login with PIN is not yet implemented with Supabase.';
-    // For now, do not navigate or attempt Supabase auth for child.
-    // navigateTo('/child-dashboard'); 
+  showUserTypeSelection.value = false;
+  if (type === 'parent') {
+    showLoginForm.value = true; // Default to showing login form for parent
+  } else if (type === 'child') {
+    showChildLoginForm.value = true;
   }
 };
 
-const validateSignupForm = () => {
-  clearSignupErrors();
-  let isValid = true;
-
-  if (!signupFullName.value.trim()) {
-    signupFullNameError.value = 'Full Name is required.';
-    isValid = false;
+const handleParentLogin = async () => {
+  loginError.value = '';
+  try {
+    const { error } = await $supabase.auth.signInWithPassword({
+      email: loginEmail.value,
+      password: loginPassword.value,
+    });
+    if (error) throw error;
+    // User will be redirected by the watcher
+  } catch (error) {
+    loginError.value = error.message;
+    console.error('Login error:', error.message);
   }
-  if (!signupEmail.value.trim()) {
-    signupEmailError.value = 'Email Address is required.';
-    isValid = false;
-  } else {
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(signupEmail.value)) {
-      signupEmailError.value = 'Please enter a valid email address.';
-      isValid = false;
-    }
-  }
-  if (!signupUsername.value.trim()) {
-    signupUsernameError.value = 'Username is required.';
-    isValid = false;
-  }
-  // Supabase default minimum password length is 6
-  if (!signupPassword.value) {
-    signupPasswordError.value = 'Password is required.';
-    isValid = false;
-  } else if (signupPassword.value.length < 6) { 
-    signupPasswordError.value = 'Password must be at least 6 characters long.';
-    isValid = false;
-  }
-  // Removed custom special character validation for now, Supabase has its own checks.
-  // Can be added back if specific local validation is desired before hitting API.
-
-  if (!signupConfirmPassword.value) {
-    signupConfirmPasswordError.value = 'Confirm Password is required.';
-    isValid = false;
-  } else if (signupPassword.value !== signupConfirmPassword.value) {
-    signupConfirmPasswordError.value = 'Passwords do not match.';
-    isValid = false;
-  }
-  if (!signupFamilyName.value.trim()) {
-    // Note: FamilyName is not currently part of the 'profiles' table schema.
-    // This field is collected but not sent to Supabase for profile creation.
-    // If it's needed, the 'profiles' table and trigger should be updated.
-    signupFamilyNameError.value = 'Family Name is required.';
-    isValid = false;
-  }
-  if (!signupAgreedToTerms.value) {
-    signupTermsError.value = 'You must agree to the Terms and Conditions and Privacy Policy.';
-    isValid = false;
-  }
-  return isValid;
 };
 
-const handleSignup = async () => {
-  if (!validateSignupForm()) {
-    return; // Stop if client-side validation fails
+const handleParentSignup = async () => {
+  signupError.value = '';
+  signupSuccess.value = '';
+  if (signupPassword.value !== signupConfirmPassword.value) {
+    signupError.value = 'Passwords do not match.';
+    return;
   }
-
-  isLoading.value = true;
-  authError.value = '';
-
   try {
     const { data, error } = await $supabase.auth.signUp({
       email: signupEmail.value,
       password: signupPassword.value,
-      options: {
-        data: {
-          full_name: signupFullName.value.trim(),
-          username: signupUsername.value.trim(),
-          role: 'parent', // Changed to lowercase 'parent'
-        }
-      }
     });
-
     if (error) throw error;
-
-    // data.user will be null if email confirmation is required, but data.session will also be null.
-    // data.user will exist if email confirmation is NOT required.
-    // For our case, email confirmation IS enabled.
-    console.log('Signup successful, user data (pending confirmation):', data.user);
-    resetSignupFields();
-    navigateTo('/please-confirm'); 
-
-  } catch (error) { 
-    console.error('Signup error:', error);
-    authError.value = error.message || 'Failed to create account. Please try again.';
-  } finally {
-    isLoading.value = false;
+    signupSuccess.value = 'Signup successful! Please check your email to confirm your account.';
+    // Optionally clear form or switch to login view
+    // showSignupForm.value = false;
+    // showLoginForm.value = true;
+  } catch (error) {
+    signupError.value = error.message;
+    console.error('Signup error:', error.message);
   }
+};
+
+const handleChildLogin = async () => {
+  childLoginError.value = '';
+  // Placeholder for child login logic
+  // This will involve fetching child profile by username and verifying PIN
+  // For now, simulate a successful login for navigation testing
+  console.log(`Attempting child login for: ${childUsername.value}`);
+  if (childUsername.value && childPin.value) {
+    // In a real scenario, you would query Supabase for the child profile
+    // and verify the hashed PIN.
+    // For now, let's assume login is successful if fields are filled.
+    console.log('Child login successful (simulated), redirecting...');
+    // To make the watcher redirect, we'd typically set the `user` object.
+    // Since this is a mock, we'll directly navigate for now, but ideally,
+    // child auth would also result in a user session recognized by useSupabaseUser
+    // or a custom child user state.
+    userType.value = 'child'; // Ensure userType is set for watcher logic
+    // This is tricky because useSupabaseUser won't reflect a custom child session easily.
+    // For now, direct navigation might be the simplest for the placeholder.
+    router.push('/child-dashboard'); 
+  } else {
+    childLoginError.value = 'Username and PIN are required.';
+  }
+};
+
+const switchToSignup = () => {
+  showLoginForm.value = false;
+  showSignupForm.value = true;
+  loginError.value = '';
+};
+
+const switchToLogin = () => {
+  showSignupForm.value = false;
+  showLoginForm.value = true;
+  signupError.value = '';
+  signupSuccess.value = '';
+};
+
+const goBackToUserTypeSelection = () => {
+  showLoginForm.value = false;
+  showSignupForm.value = false;
+  showChildLoginForm.value = false;
+  showUserTypeSelection.value = true;
+  userType.value = '';
+  loginError.value = '';
+  signupError.value = '';
+  signupSuccess.value = '';
+  childLoginError.value = '';
 };
 
 </script>
 
 <style scoped>
-/* Add any custom styles here if needed */
+/* Add any specific styles for the login page here */
+.user-type-button {
+  /* Example: Tailwind classes for styling, adjust as needed */
+  @apply bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg text-xl shadow-md transition duration-150 ease-in-out m-2;
+}
+
+.form-container {
+  @apply mt-8 p-6 bg-white rounded-lg shadow-xl w-full max-w-md;
+}
+
+.form-input {
+  @apply mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm;
+}
+
+.form-button {
+  @apply w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500;
+}
+
+.error-message {
+  @apply mt-2 text-sm text-red-600;
+}
+
+.success-message {
+  @apply mt-2 text-sm text-green-600;
+}
+
+.toggle-link {
+  @apply font-medium text-indigo-600 hover:text-indigo-500;
+}
+
+.back-button {
+    @apply absolute top-4 left-4 text-indigo-600 hover:text-indigo-800;
+}
 </style>

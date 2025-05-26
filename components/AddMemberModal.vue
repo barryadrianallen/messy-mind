@@ -41,6 +41,16 @@
             <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
             <input type="text" id="username" v-model="form.username" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Enter username for login">
           </div>
+
+          <div v-if="form.role === 'Child'">
+            <label for="pin" class="block text-sm font-medium text-gray-700 mb-1">Create PIN (4-6 digits)</label>
+            <input type="password" id="pin" v-model="form.pin" required pattern="\d{4,6}" title="PIN must be 4 to 6 digits" maxlength="6" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Enter a 4-6 digit PIN">
+          </div>
+
+          <div v-if="form.role === 'Child'">
+            <label for="confirmPin" class="block text-sm font-medium text-gray-700 mb-1">Confirm PIN</label>
+            <input type="password" id="confirmPin" v-model="form.confirmPin" required pattern="\d{4,6}" title="PIN must be 4 to 6 digits" maxlength="6" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Re-enter PIN">
+          </div>
         </div>
 
         <!-- Modal Footer -->
@@ -72,7 +82,9 @@ export default {
         fullName: '',
         role: '', // Default to empty, user must select
         age: null,
-        username: ''
+        username: '',
+        pin: '',
+        confirmPin: ''
       }
     };
   },
@@ -80,6 +92,8 @@ export default {
     'form.role'(newRole) {
       if (newRole !== 'Child') {
         this.form.age = null; // Clear age if role is not Child
+        this.form.pin = '';
+        this.form.confirmPin = '';
       }
     },
     show(newVal) {
@@ -89,6 +103,8 @@ export default {
         this.form.role = '';
         this.form.age = null;
         this.form.username = '';
+        this.form.pin = '';
+        this.form.confirmPin = '';
       }
     }
   },
@@ -101,10 +117,25 @@ export default {
         alert('Please enter a valid age for the child.');
         return;
       }
+      if (this.form.role === 'Child') {
+        if (!this.form.pin || !/^\d{4,6}$/.test(this.form.pin)) {
+          alert('Please enter a valid PIN (4-6 digits).');
+          return;
+        }
+        if (this.form.pin !== this.form.confirmPin) {
+          alert('PINs do not match. Please re-enter.');
+          return;
+        }
+      }
       // Create a copy to avoid reactivity issues if parent modifies it
       const memberData = { ...this.form };
       if (memberData.role !== 'Child') {
-        delete memberData.age; // Remove age if not a child
+        delete memberData.age;
+        delete memberData.pin;
+        delete memberData.confirmPin;
+      } else {
+        // We only want to emit the pin, not the confirmPin
+        delete memberData.confirmPin;
       }
       this.$emit('add-member', memberData);
       this.closeModal(); // Close modal after submission

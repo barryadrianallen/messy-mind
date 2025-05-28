@@ -107,6 +107,8 @@ describe('AddMemberModal.vue', () => {
       await wrapper.find('select#role').setValue('Child');
       await wrapper.find('input#age').setValue(7);
       await wrapper.find('input#username').setValue('childuser');
+      await wrapper.find('input#pin').setValue('1234'); // Added PIN
+      await wrapper.find('input#confirmPin').setValue('1234'); // Added Confirm PIN
       await wrapper.find('form').trigger('submit.prevent');
 
       expect(wrapper.emitted()['add-member']).toBeTruthy();
@@ -114,7 +116,8 @@ describe('AddMemberModal.vue', () => {
         fullName: 'Child Name',
         role: 'Child',
         age: 7,
-        username: 'childuser'
+        username: 'childuser',
+        pin: '1234' // Added expectation for PIN
       });
       expect(wrapper.emitted().close).toBeTruthy();
       expect(global.alert).not.toHaveBeenCalled();

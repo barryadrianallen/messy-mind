@@ -16,6 +16,7 @@
     "@nuxtjs/supabase": "^1.5.1",
     "@supabase/supabase-js": "^2.49.8",
     "bcryptjs": "^3.0.2",
+    "next-devtools": "^0.0.1",
     "nuxt": "^3.17.4",
     "vue": "^3.5.14",
     "vue-router": "^4.5.1"

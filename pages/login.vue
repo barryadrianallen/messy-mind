@@ -3,19 +3,21 @@
     <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
 
       <!-- Initial View: Login or Parent Signup Option -->
-      <div v-if="!showLoginForm && !showSignupForm">
+      <div v-if="!showLoginForm && !showSignupForm && !showChildLoginForm" data-testid="user-type-selection">
         <h1 class="text-3xl font-bold text-center text-gray-900 mb-2">Messy Mind</h1>
         <p class="text-gray-900 text-center mb-6">Please select your account type to continue:</p>
         
         <div class="space-y-4">
           <button 
             @click="selectUserType('Parent')" 
+            data-testid="parent-button"
             class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-blue-700 transition-colors text-lg"
           >
             I am a Parent
           </button>
           <button 
             @click="selectUserType('Child')" 
+            data-testid="child-button"
             class="w-full border-2 border-blue-600 text-blue-600 font-bold py-3 px-4 rounded-xl hover:bg-blue-50 transition-colors text-lg"
           >
             I am a Child
@@ -25,7 +27,8 @@
         <div class="mt-8 text-center">
           <p class="text-gray-600 mb-2">New family?</p>
           <button 
-            @click="prepareSignup"
+            @click="switchToSignup" 
+            data-testid="create-parent-account-button"
             class="w-full bg-gray-100 text-gray-700 font-medium py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors"
           >
             Create Parent Account
@@ -39,7 +42,7 @@
       </div>
       
       <!-- Login Form (shown after user type selection) -->
-      <form v-if="showLoginForm && !showSignupForm" @submit.prevent="handleLogin" class="space-y-4">
+      <form v-if="showLoginForm && !showSignupForm" @submit.prevent="handleLogin" class="space-y-4" data-testid="parent-login-form">
         <h1 class="text-3xl font-bold text-center text-gray-900 mb-2">
           {{ userType }} Login
         </h1>
@@ -52,7 +55,7 @@
           <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
           <input
             id="email"
-            v-model="email" 
+            v-model="loginEmail" 
             type="email"
             required
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -78,7 +81,7 @@
           <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
           <input
             id="password"
-            v-model="password"
+            v-model="loginPassword"
             type="password"
             required
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -91,8 +94,8 @@
           </div>
         </div>
 
-        <div v-if="authError" class="text-red-500 text-sm text-center p-2 bg-red-50 rounded-md">
-          {{ authError }}
+        <div v-if="loginError" class="text-red-500 text-sm text-center p-2 bg-red-50 rounded-md">
+          {{ loginError }}
         </div>
         
         <button
@@ -105,8 +108,9 @@
         
         <div class="text-center mt-4">
           <button 
-            @click="backToInitial"
+            @click="switchToUserTypeSelection"
             type="button"
+            data-testid="back-to-home-button-parent-login"
             class="text-blue-600 hover:text-blue-800 text-sm transition-colors"
           >
             Back to Home
@@ -114,9 +118,38 @@
         </div>
       </form>
 
+      <!-- Child Login Form -->
+      <div v-if="showChildLoginForm" class="animate-fadeIn space-y-4" data-testid="child-login-form">
+        <h1 class="text-3xl font-bold text-center text-gray-900 mb-2">Child Login</h1>
+        <p class="text-gray-500 text-center text-sm mb-6">Enter your special username and password.</p>
+        
+        <form @submit.prevent="handleChildLogin" class="space-y-4">
+          <div>
+            <label for="childUsername" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <input id="childUsername" v-model="childUsername" type="text" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Your unique username">
+          </div>
+          <div>
+            <label for="childPassword" class="block text-sm font-medium text-gray-700 mb-1">Password (PIN)</label>
+            <input id="childPassword" v-model="childPassword" type="password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Your secret password">
+          </div>
+
+          <div v-if="childLoginError" class="text-red-500 text-sm text-center p-2 bg-red-50 rounded-md">
+            {{ childLoginError }}
+          </div>
+
+          <button type="submit" :disabled="isLoading" class="w-full bg-green-500 text-white font-bold py-3 px-4 rounded-xl hover:bg-green-600 transition-colors text-lg mt-6 disabled:opacity-50">
+            {{ isLoading ? 'Logging in...' : 'Enter' }}
+          </button>
+        </form>
+
+        <div class="text-center mt-4">
+          <button @click="switchToUserTypeSelection" type="button" data-testid="back-to-home-button-child-login" class="text-sm text-gray-600 hover:text-gray-800">Back to Home</button>
+        </div>
+      </div>
+
       <!-- Parent Signup Form -->
-      <div v-if="showSignupForm">
-        <button @click="backToInitial" class="mb-4 text-blue-600 hover:text-blue-800 flex items-center">
+      <div v-if="showSignupForm" data-testid="parent-signup-form">
+        <button @click="switchToUserTypeSelection" data-testid="back-to-home-button-parent-signup" class="mb-4 text-blue-600 hover:text-blue-800 flex items-center">
           <span class="mr-1 text-xl">←</span> Back
         </button>
         <h1 class="text-2xl font-bold text-center text-gray-900 mb-4">Create Parent Account</h1>
@@ -177,13 +210,14 @@
           </div>
           <p v-if="signupTermsError" class="text-red-500 text-xs mt-1">{{ signupTermsError }}</p> <!-- Moved error below checkbox -->
           
-          <div v-if="authError" class="text-red-500 text-sm text-center p-2 bg-red-50 rounded-md">
-            {{ authError }}
+          <div v-if="signupError" class="text-red-500 text-sm text-center p-2 bg-red-50 rounded-md">
+            {{ signupError }}
           </div>
 
           <button 
             type="submit" 
             :disabled="isLoading"
+            data-testid="signup-submit-button"
             class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-blue-700 transition-colors text-lg mt-6 disabled:opacity-50"
           >
             {{ isLoading ? 'Creating Account...' : 'Create Parent Account' }}
@@ -194,7 +228,7 @@
               Already have an account? 
               <button @click="switchToLogin" type="button" class="font-medium text-blue-600 hover:text-blue-800">Sign in here</button>
             </p>
-            <button @click="backToInitial" type="button" class="text-sm text-gray-600 hover:text-gray-800">Back to Home</button>
+            <button @click="switchToUserTypeSelection" type="button" class="text-sm text-gray-600 hover:text-gray-800">Back to Home</button>
           </div>
         </form>
       </div>
@@ -224,6 +258,7 @@ const showLoginForm = ref(false);
 const loginEmail = ref('');
 const loginPassword = ref('');
 const loginError = ref('');
+const isLoading = ref(false); // Added for loading state
 
 // State for signup form
 const showSignupForm = ref(false);
@@ -232,10 +267,22 @@ const signupPassword = ref('');
 const signupConfirmPassword = ref('');
 const signupError = ref('');
 const signupSuccess = ref('');
+const signupFullName = ref(''); // Added for signup form
+const signupUsername = ref(''); // Added for signup form
+const signupFamilyName = ref(''); // Added for signup form
+const signupAgreedToTerms = ref(false); // Added for signup form
+const signupFullNameError = ref('');
+const signupEmailError = ref('');
+const signupUsernameError = ref('');
+const signupPasswordError = ref('');
+const signupConfirmPasswordError = ref('');
+const signupFamilyNameError = ref('');
+const signupTermsError = ref('');
 
 // State for child login
 const showChildLoginForm = ref(false);
 const childUsername = ref('');
+const childPassword = ref(''); // Added for child login form
 const childPin = ref('');
 const childLoginError = ref('');
 
@@ -269,17 +316,23 @@ watch(user, (currentUser) => {
 }, { immediate: true });
 
 const selectUserType = (type) => {
-  userType.value = type;
+  console.log('[Login Page] selectUserType called with type:', type);
+  const lowerCaseType = type.toLowerCase();
+  userType.value = type; // Keep original casing for display or other logic if needed, or use lowerCaseType
   showUserTypeSelection.value = false;
-  if (type === 'parent') {
+  console.log('[Login Page] In selectUserType, showUserTypeSelection is now:', showUserTypeSelection.value);
+  if (lowerCaseType === 'parent') {
     showLoginForm.value = true; // Default to showing login form for parent
-  } else if (type === 'child') {
+    console.log('[Login Page] showLoginForm set to:', showLoginForm.value);
+  } else if (lowerCaseType === 'child') {
     showChildLoginForm.value = true;
+    console.log('[Login Page] showChildLoginForm set to:', showChildLoginForm.value);
   }
 };
 
 const handleParentLogin = async () => {
   loginError.value = '';
+  isLoading.value = true;
   try {
     const { error } = await $supabase.auth.signInWithPassword({
       email: loginEmail.value,
@@ -290,20 +343,39 @@ const handleParentLogin = async () => {
   } catch (error) {
     loginError.value = error.message;
     console.error('Login error:', error.message);
+  } finally {
+    isLoading.value = false;
   }
 };
 
 const handleParentSignup = async () => {
   signupError.value = '';
   signupSuccess.value = '';
+  isLoading.value = true;
+  // Basic validation example (can be expanded)
   if (signupPassword.value !== signupConfirmPassword.value) {
     signupError.value = 'Passwords do not match.';
+    isLoading.value = false;
     return;
   }
+  if (!signupAgreedToTerms.value) { // Assuming signupAgreedToTerms is defined
+    signupError.value = 'You must agree to the terms and conditions.';
+    isLoading.value = false;
+    return;
+  }
+
   try {
     const { data, error } = await $supabase.auth.signUp({
       email: signupEmail.value,
       password: signupPassword.value,
+      // You might want to pass additional user metadata here if your Supabase setup expects it
+      // options: {
+      //   data: {
+      //     full_name: signupFullName.value, // Example
+      //     username: signupUsername.value, // Example
+      //     family_name: signupFamilyName.value // Example
+      //   }
+      // }
     });
     if (error) throw error;
     signupSuccess.value = 'Signup successful! Please check your email to confirm your account.';
@@ -313,6 +385,8 @@ const handleParentSignup = async () => {
   } catch (error) {
     signupError.value = error.message;
     console.error('Signup error:', error.message);
+  } finally {
+    isLoading.value = false;
   }
 };
 
@@ -353,16 +427,20 @@ const switchToLogin = () => {
   signupSuccess.value = '';
 };
 
-const goBackToUserTypeSelection = () => {
+const switchToUserTypeSelection = () => {
+  console.log('[Login Page] switchToUserTypeSelection called.');
+  console.log('[Login Page] Before state change: showLoginForm:', showLoginForm.value, 'showSignupForm:', showSignupForm.value, 'showChildLoginForm:', showChildLoginForm.value, 'showUserTypeSelection:', showUserTypeSelection.value, 'userType:', userType.value);
   showLoginForm.value = false;
   showSignupForm.value = false;
   showChildLoginForm.value = false;
   showUserTypeSelection.value = true;
-  userType.value = '';
+  userType.value = ''; // Ensure userType is reset
+  // Clear any errors
   loginError.value = '';
   signupError.value = '';
   signupSuccess.value = '';
   childLoginError.value = '';
+  console.log('[Login Page] After state change: showLoginForm:', showLoginForm.value, 'showSignupForm:', showSignupForm.value, 'showChildLoginForm:', showChildLoginForm.value, 'showUserTypeSelection:', showUserTypeSelection.value, 'userType:', userType.value);
 };
 
 </script>

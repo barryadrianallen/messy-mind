@@ -25,8 +25,8 @@ export default {
       required: true
     },
     selectedChildId: {
-      type: Number,
-      required: true
+      type: [String, null],
+      default: null
     }
   },
   emits: ['select']

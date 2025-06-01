@@ -248,6 +248,7 @@ import { useRouter } from 'vue-router';
 const { $supabase } = useNuxtApp(); // Now provided by @nuxtjs/supabase
 const router = useRouter();
 const user = useSupabaseUser();
+const supabase = useSupabaseClient(); // Initialize Supabase client
 
 // State for user type selection
 const userType = ref(''); // 'parent' or 'child'
@@ -330,63 +331,133 @@ const selectUserType = (type) => {
   }
 };
 
-const handleParentLogin = async () => {
-  loginError.value = '';
+
+const handleLogin = async () => {
+  console.log('[handleLogin] Function called - button clicked!');
+  // Basic validation from original handleParentLogin logic
+  if (!loginEmail.value || !loginPassword.value) {
+    loginError.value = 'Email and password are required.';
+    console.log('[handleLogin] Email or password field is empty.');
+    return;
+  }
   isLoading.value = true;
+  loginError.value = ''; // Clear previous errors
+
+  console.log(`[handleLogin] Attempting login for email: ${loginEmail.value}`);
+
   try {
-    const { error } = await $supabase.auth.signInWithPassword({
-      email: loginEmail.value,
-      password: loginPassword.value,
+    // const { error } = await supabase.auth.signInWithPassword({ // Original supabase client
+    const { error } = await supabase.auth.signInWithPassword({ // Corrected to supabase
+      email: loginEmail.value.trim(),
+      password: loginPassword.value, // Password is not trimmed
     });
-    if (error) throw error;
-    // User will be redirected by the watcher
-  } catch (error) {
-    loginError.value = error.message;
-    console.error('Login error:', error.message);
+
+    if (error) {
+      console.error('[handleLogin] Supabase login error:', error.message);
+      loginError.value = error.message;
+      isLoading.value = false; 
+      return; 
+    }
+    console.log('[handleLogin] Login successful, user session should be active.');
+    // Watcher should handle redirect.
+
+  } catch (err) {
+    console.error('[handleLogin] Unexpected error during login:', err);
+    loginError.value = 'An unexpected error occurred. Please try again.';
   } finally {
-    isLoading.value = false;
+    isLoading.value = false; 
+    console.log('[handleLogin] isLoading set to false in finally block.');
   }
 };
 
-const handleParentSignup = async () => {
-  signupError.value = '';
-  signupSuccess.value = '';
-  isLoading.value = true;
-  // Basic validation example (can be expanded)
-  if (signupPassword.value !== signupConfirmPassword.value) {
-    signupError.value = 'Passwords do not match.';
-    isLoading.value = false;
-    return;
-  }
-  if (!signupAgreedToTerms.value) { // Assuming signupAgreedToTerms is defined
-    signupError.value = 'You must agree to the terms and conditions.';
-    isLoading.value = false;
+const handleSignup = async () => {
+  console.log('[handleSignup] Validating email...');
+  if (!signupEmail.value || !/^\S+@\S+\.\S+$/.test(signupEmail.value)) {
+    signupEmailError.value = 'Please enter a valid email address.';
+    console.log('[handleSignup] Email validation failed.');
     return;
   }
 
+  console.log('[handleSignup] Validating username...');
+  if (!signupUsername.value.trim()) {
+    signupUsernameError.value = 'Username is required.';
+    console.log('[handleSignup] Username validation failed.');
+    return;
+  }
+  
+  console.log('[handleSignup] Validating password length...');
+  if (signupPassword.value.length < 8) {
+    signupPasswordError.value = 'Password must be at least 8 characters long.';
+    console.log('[handleSignup] Password length validation failed.');
+    return;
+  }
+
+  console.log('[handleSignup] Validating password match...');
+  if (signupPassword.value !== signupConfirmPassword.value) {
+    signupConfirmPasswordError.value = 'Passwords do not match.';
+    console.log('[handleSignup] Password match validation failed.');
+    return;
+  }
+  
+  console.log('[handleSignup] Validating family name...');
+  if (!signupFamilyName.value.trim()) {
+    signupFamilyNameError.value = 'Family name is required.';
+    console.log('[handleSignup] Family name validation failed.');
+    return;
+  }
+
+  console.log('[handleSignup] Validating terms agreement...');
+  if (!signupAgreedToTerms.value) {
+    signupTermsError.value = 'You must agree to the Terms and Conditions and Privacy Policy.';
+    console.log('[handleSignup] Terms agreement validation failed.');
+    return;
+  }
+
+  console.log('[handleSignup] All client-side validations passed.');
+  isLoading.value = true;
+  console.log('[handleSignup] isLoading set to true, attempting Supabase signUp...');
+
   try {
-    const { data, error } = await $supabase.auth.signUp({
-      email: signupEmail.value,
+    const { data, error } = await supabase.auth.signUp({
+      email: signupEmail.value.trim(),
       password: signupPassword.value,
-      // You might want to pass additional user metadata here if your Supabase setup expects it
-      // options: {
-      //   data: {
-      //     full_name: signupFullName.value, // Example
-      //     username: signupUsername.value, // Example
-      //     family_name: signupFamilyName.value // Example
-      //   }
-      // }
+      options: {
+        data: {
+          full_name: signupFullName.value.trim(),
+          username: signupUsername.value.trim(),
+          role: 'parent',
+          family_name: signupFamilyName.value.trim()
+        }
+      }
     });
-    if (error) throw error;
-    signupSuccess.value = 'Signup successful! Please check your email to confirm your account.';
-    // Optionally clear form or switch to login view
-    // showSignupForm.value = false;
-    // showLoginForm.value = true;
-  } catch (error) {
-    signupError.value = error.message;
-    console.error('Signup error:', error.message);
+    console.log('[handleSignup] Supabase signUp response:', { data, error });
+
+    if (error) {
+      if (error.message.includes('User already registered')) {
+        signupError.value = 'This email is already registered. Please try logging in or use a different email.';
+        signupEmailError.value = 'This email is already registered.';
+      } else if (error.message.includes('duplicate key value violates unique constraint') && error.message.includes('profiles_username_key')) {
+        signupError.value = 'This username is already taken. Please choose a different username.';
+        signupUsernameError.value = 'This username is already taken.';
+      } else if (error.message.includes('Database error saving new user')) {
+        signupError.value = 'There was a problem creating your profile. This could be due to an invalid input or a server issue. Please check your details and try again.';
+      } else {
+        signupError.value = `Signup failed: ${error.message}`;
+      }
+      console.error('[handleSignup] Supabase signUp error:', error.message);
+    } else {
+      signupSuccess.value = 'Signup successful! Please check your email to confirm your account.';
+      console.log('[handleSignup] Signup successful, success message set.');
+      // Optionally clear form or navigate to a 'please-confirm' page
+      // router.push('/please-confirm'); 
+    }
+  } catch (err) {
+    // This catch block handles unexpected errors not directly from Supabase signUp error object or client-side issues
+    console.error('[handleSignup] Unexpected error during signup process:', err.message, err);
+    signupError.value = 'An unexpected error occurred. Please try again.';
   } finally {
     isLoading.value = false;
+    console.log('[handleSignup] isLoading set to false in finally block.');
   }
 };
 

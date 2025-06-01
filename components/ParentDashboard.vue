@@ -108,56 +108,225 @@ export default {
   },
   data() {
     return {
-      children: [
-        { id: 1, name: 'Alex' },
-        { id: 2, name: 'Sam' }
-      ],
-      selectedChildId: 1,
-      tasks: [
-        { id: 1, childId: 1, title: 'Brush teeth', description: 'Morning and evening', completed: false },
-        { id: 2, childId: 1, title: 'Make bed', description: 'After waking up', completed: true },
-        { id: 3, childId: 2, title: 'Practice piano', description: '30 minutes', completed: false },
-      ],
-      nextTaskId: 4,
-      showSettingsMenu: false
-    }
+      children: [], // Initialize as empty
+      selectedChildId: null, // Will be set after children are fetched
+      tasks: [], // Initialize as empty
+      showSettingsMenu: false,
+      isLoading: true, // To show a loading indicator
+      errorLoading: null // To display any errors during data fetch
+    };
   },
   computed: {
     selectedChild() {
-      return this.children.find(child => child.id === this.selectedChildId) || this.children[0]
+      if (!this.children || this.children.length === 0) return null;
+      return this.children.find(child => child.id === this.selectedChildId) || this.children[0];
     },
     filteredTasks() {
-      return this.tasks.filter(task => task.childId === this.selectedChildId)
+      if (!this.selectedChildId) {
+         return []; // No child selected, no tasks to show for them
+      }
+      return this.tasks.filter(task => task.child_id === this.selectedChildId);
+    }
+  },
+  async mounted() {
+    const supabase = useSupabaseClient();
+    const user = useSupabaseUser();
+
+    if (user.value && user.value.id) {
+      try {
+        this.isLoading = true;
+        this.errorLoading = null;
+        const parentUserId = user.value.id;
+        console.log("[ParentDashboard] Fetching data for parent user:", parentUserId);
+
+        // STEP 1: Fetch children managed by the current parent
+        const { data: childrenData, error: childrenError } = await supabase
+          .from('profiles')
+          .select('id, full_name, username, role') // Select necessary child profile fields
+          .eq('managed_by_user_id', parentUserId)
+          .eq('role', 'child');
+
+        if (childrenError) throw childrenError;
+        // Ensure childrenData is an array and re-map if needed to fit expected structure, e.g., {id, name}
+        this.children = (childrenData || []).map(child => ({ 
+            id: child.id, 
+            name: child.full_name || child.username || 'Unnamed Child' // Use full_name, fallback to username
+        }));
+        console.log("[ParentDashboard] Fetched children:", this.children);
+
+        // STEP 2: Set selectedChildId (e.g., to the first child if any)
+        if (this.children.length > 0) {
+          this.selectedChildId = this.children[0].id;
+        } else {
+          this.selectedChildId = null;
+          this.tasks = []; // No children, so no tasks
+          console.log("[ParentDashboard] No children found for this parent.");
+        }
+
+        // STEP 3: Fetch tasks for the children (if any children were found)
+        if (this.selectedChildId && this.children.length > 0) {
+          const childIds = this.children.map(c => c.id);
+          console.log("[ParentDashboard] Fetching tasks for child IDs:", childIds);
+          
+          // CONFIRM: Please confirm your tasks table name and the column linking to child's profile.id
+          // Assuming 'tasks' table and 'child_id' column for now.
+          const { data: tasksData, error: tasksError } = await supabase
+            .from('tasks') // <<< CONFIRM THIS TABLE NAME
+            .select('*')   // Select all task fields
+            .in('child_id', childIds) // <<< CONFIRM THIS COLUMN NAME
+        .eq('parent_id', parentUserId); // Ensure tasks are fetched for the logged-in parent
+
+          if (tasksError) {
+            console.error('[ParentDashboard] Supabase error fetching tasks:', JSON.stringify(tasksError));
+            throw tasksError;
+          }
+
+          this.tasks = tasksData || [];
+          console.log("[ParentDashboard] Fetched tasks:", this.tasks);
+        } else {
+            this.tasks = [];
+        }
+
+      } catch (error) {
+        console.error('[ParentDashboard] Error fetching dashboard data:', error.message, error);
+        this.errorLoading = 'Failed to load dashboard data. ' + error.message;
+        this.children = [];
+        this.tasks = [];
+      } finally {
+        this.isLoading = false;
+      }
+    } else {
+      console.warn('[ParentDashboard] User not authenticated or user ID missing. Redirecting to login.');
+      this.errorLoading = 'You are not logged in or user data is incomplete.';
+      this.isLoading = false;
+      if (this.$router) this.$router.push('/login');
     }
   },
   methods: {
     selectChild(childId) {
       this.selectedChildId = childId
     },
-    handleAddTask(newTask) {
-      this.tasks.push({
-        id: this.nextTaskId++,
-        childId: this.selectedChildId,
-        title: newTask.title,
-        description: newTask.description,
-        completed: false
-      })
-    },
-    removeTask(taskId) {
-      const index = this.tasks.findIndex(task => task.id === taskId)
-      if (index !== -1) {
-        this.tasks.splice(index, 1)
+    async handleAddTask(newTask) {
+      const supabase = useSupabaseClient();
+      const user = useSupabaseUser(); // Parent user
+
+      if (!this.selectedChildId) {
+        console.error('[ParentDashboard] Cannot add task: No child selected.');
+        // Optionally, set a user-facing error message
+        this.errorLoading = 'Please select a child to assign the task to.';
+        return;
+      }
+      if (!user.value || !user.value.id) {
+        console.error('[ParentDashboard] Cannot add task: Parent user not authenticated.');
+        this.errorLoading = 'Authentication error. Please log in again.';
+        return;
+      }
+
+      try {
+        this.isLoading = true; // Indicate loading for task add
+        // CONFIRM: tasks table name and child_id column name
+        const { data: addedTask, error } = await supabase
+          .from('tasks') // Ensure this is your tasks table name
+          .insert({
+            title: newTask.title,
+            description: newTask.description,
+            child_id: this.selectedChildId, // Ensure this is the FK column for child's ID
+            parent_id: user.value.id,     // Parent's ID
+            completed: false                // Default completed status
+          })
+          .select() // Select the newly inserted task to get its ID and other defaults
+          .single();  // We expect only one row to be inserted and returned
+
+        if (error) {
+          console.error('[ParentDashboard] Supabase error inserting task:', JSON.stringify(error));
+          throw error;
+        }
+
+        if (addedTask) {
+          this.tasks.push(addedTask); // Add the new task to the local array
+          console.log('[ParentDashboard] Task added successfully and to local state:', addedTask);
+        } else {
+          console.warn('[ParentDashboard] Task inserted but no data returned from Supabase. Refresh might be needed.');
+          // Optionally, you could re-fetch all tasks here, but push is more optimistic:
+          // await this.fetchTasksForChildren(); // Assuming you might create such a method
+        }
+      } catch (error) {
+        console.error('[ParentDashboard] Error adding task:', error.message);
+        this.errorLoading = 'Failed to add task: ' + error.message;
+      } finally {
+        this.isLoading = false;
       }
     },
-    toggleTaskCompletion(taskId) {
-      const task = this.tasks.find(task => task.id === taskId)
-      if (task) {
-        task.completed = !task.completed
+    async removeTask(taskId) {
+      const supabase = useSupabaseClient();
+      try {
+        this.isLoading = true; // Indicate loading for task removal
+        // CONFIRM: tasks table name
+        const { error } = await supabase
+          .from('tasks') // <<< CONFIRM THIS TABLE NAME
+          .delete()
+          .eq('id', taskId); // Assuming 'id' is the primary key of the tasks table
+
+        if (error) throw error;
+
+        const index = this.tasks.findIndex(task => task.id === taskId);
+        if (index !== -1) {
+          this.tasks.splice(index, 1);
+        }
+        console.log('[ParentDashboard] Task removed successfully:', taskId);
+      } catch (error) {
+        console.error('[ParentDashboard] Error removing task:', error.message);
+        this.errorLoading = 'Failed to remove task: ' + error.message;
+      } finally {
+        this.isLoading = false;
       }
     },
-    logout() {
-      // Navigate to home/login page
-      this.$router.push('/login')
+    async toggleTaskCompletion(taskId) {
+      const task = this.tasks.find(t => t.id === taskId);
+      if (!task) {
+        console.error('[ParentDashboard] Task not found for toggling completion:', taskId);
+        return;
+      }
+
+      const newCompletedStatus = !task.completed;
+      const supabase = useSupabaseClient();
+
+      try {
+        // Optimistically update UI first for responsiveness
+        const originalStatus = task.completed;
+        task.completed = newCompletedStatus;
+
+        // CONFIRM: tasks table name
+        const { error } = await supabase
+          .from('tasks') // <<< CONFIRM THIS TABLE NAME
+          .update({ completed: newCompletedStatus })
+          .eq('id', taskId); // Assuming 'id' is the primary key of the tasks table
+
+        if (error) {
+          task.completed = originalStatus; // Revert UI on error
+          throw error;
+        }
+        console.log('[ParentDashboard] Task completion toggled successfully:', taskId, 'to', newCompletedStatus);
+      } catch (error) {
+        console.error('[ParentDashboard] Error toggling task completion:', error.message);
+        this.errorLoading = 'Failed to update task: ' + error.message;
+        // UI is already reverted if it was an optimistic update that failed
+      }
+    },
+    async logout() {
+      const supabase = useSupabaseClient();
+      try {
+        this.isLoading = true; // Optional: show loading state during logout
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+        this.$router.push('/login');
+      } catch (error) {
+        console.error('Error logging out:', error.message);
+        // Optionally show an error message to the user
+        this.errorLoading = 'Logout failed: ' + error.message; // Display error on dashboard if needed
+      } finally {
+        this.isLoading = false;
+      }
     },
     toggleSettingsMenu() {
       this.showSettingsMenu = !this.showSettingsMenu;

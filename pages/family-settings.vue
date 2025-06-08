@@ -257,65 +257,105 @@ export default {
         this.updateFamilyStats();
       }
     },
-    addNewFamilyMember(newMemberData) {
-      // Access parentUser via 'this.parentUser' (it's automatically unwrapped from the Ref)
-      const parentId = this.parentUser ? this.parentUser.id : null;
+    addNewFamilyMember: async function(newMemberData) {
+      const supabase = useSupabaseClient();
+      const user = useSupabaseUser();
+      const parentId = user.value ? user.value.id : null;
 
       if (!parentId) {
-        console.error('Parent user ID not found. Cannot add family member.');
-        // Optionally, show an error message to the user
-        alert('Error: Could not identify the current user. Please try logging in again.');
+        alert('Error: Parent user ID not found. Please log in again.');
+        console.error("addNewFamilyMember: parentId is null, user:", user.value);
         return;
       }
 
-      const localId = this.familyMembers.length > 0 ? Math.max(...this.familyMembers.map(m => m.id)) + 1 : 1;
-      
-      let hashedPin = undefined;
-      if (newMemberData.role === 'Child' && newMemberData.pin) {
-        const salt = bcrypt.genSaltSync(10);
-        hashedPin = bcrypt.hashSync(newMemberData.pin, salt);
+      this.isLoading = true; // Optional: for loading indicator. Add isLoading: false to data() properties.
+      let savedMemberForUI = null;
+      const roleLower = newMemberData.role.toLowerCase();
+
+      try {
+        if (roleLower === 'child') {
+          console.log('Attempting to add Child via Edge Function with data:', {
+            fullName: newMemberData.fullName,
+            username: newMemberData.username,
+            parentUserId: parentId,
+          });
+          const { data: functionResponse, error: functionError } = await supabase.functions.invoke('create-child-user', {
+            body: {
+              fullName: newMemberData.fullName,
+              username: newMemberData.username,
+              parentUserId: parentId,
+            },
+          });
+
+          if (functionError) {
+            console.error('Error invoking create-child-user Edge Function:', functionError);
+            alert(`Error adding child: ${functionError.message}`);
+            this.isLoading = false; // Reset on error
+            return;
+          }
+
+          if (functionResponse && functionResponse.profile) {
+            savedMemberForUI = functionResponse.profile;
+            console.log('Child created via Edge Function:', savedMemberForUI);
+          } else {
+            console.error('Edge Function did not return expected profile data:', functionResponse);
+            alert('Error adding child: Unexpected response from server.');
+            this.isLoading = false; // Reset on error
+            return;
+          }
+        } else if (roleLower === 'parent') {
+          const profileDataForSupabase = {
+            full_name: newMemberData.fullName,
+            username: newMemberData.username,
+            role: roleLower,
+            avatar_url: null,
+          };
+          console.log('Attempting to save Parent directly to Supabase:', profileDataForSupabase);
+          
+          const { data: dbSavedMember, error: supabaseError } = await supabase
+            .from('profiles')
+            .insert(profileDataForSupabase)
+            .select()
+            .single();
+
+          if (supabaseError) {
+            console.error('Error saving new parent to Supabase:', supabaseError);
+            alert(`Error adding family member: ${supabaseError.message}`);
+            this.isLoading = false; // Reset on error
+            return;
+          }
+          savedMemberForUI = dbSavedMember;
+          console.log('New parent saved to Supabase:', savedMemberForUI);
+        } else {
+          alert('Invalid role selected. Please choose "Child" or "Parent".');
+          this.isLoading = false; // Reset
+          return;
+        }
+
+        // Common UI update logic
+        if (savedMemberForUI) {
+          const memberToAddLocally = {
+            id: savedMemberForUI.id,
+            name: savedMemberForUI.full_name,
+            username: savedMemberForUI.username,
+            role: savedMemberForUI.role, 
+            age: roleLower === 'child' ? newMemberData.age : undefined,
+            avatarInitial: savedMemberForUI.full_name ? savedMemberForUI.full_name.charAt(0).toUpperCase() : '?'
+          };
+          this.familyMembers.push(memberToAddLocally);
+          this.isAddMemberModalVisible = false;
+          this.updateFamilyStats();
+          alert('Family member added successfully!');
+        } else {
+          console.warn('Saved member data for UI is null. This might indicate an issue with the data returned from the server.');
+          alert('Family member may have been added, but there was an issue retrieving the confirmation details. Please refresh and check.');
+        }
+      } catch (e) {
+        console.error(`Exception during addNewFamilyMember for role ${roleLower}:`, e);
+        alert(`An unexpected error occurred: ${e.message}`);
+      } finally {
+        this.isLoading = false;
       }
-
-      // This is the object we'd eventually save to Supabase for the 'profiles' table
-      const profileDataForSupabase = {
-        // id: will come from the new auth.users entry for the child, or parentId if it's the parent's own profile update
-        full_name: newMemberData.fullName,
-        username: newMemberData.username,
-        role: newMemberData.role,
-        avatar_url: null, // Or some default
-        // Specific to child
-        ...(newMemberData.role === 'Child' && {
-          hashed_pin: hashedPin,
-          managed_by_user_id: parentId 
-          // 'age' is not in the profiles table, handle separately if needed elsewhere
-        })
-      };
-
-      // For parent's own profile (if we were editing/creating it here), managed_by_user_id might be null or parentId
-      if (newMemberData.role === 'Parent') {
-        // profileDataForSupabase.id = parentId; // Assuming parent is editing their own profile
-        // profileDataForSupabase.managed_by_user_id = null; // Or parentId
-      }
-
-      console.log('Data to be sent to Supabase for profiles table:', profileDataForSupabase);
-      // TODO: Implement actual Supabase call to create auth.user for child (if new) and insert/update profileDataForSupabase
-
-      // For local display, we still add to the familyMembers array with some local data structure
-      const memberToAddLocally = {
-        id: localId, // Local temporary ID for the list
-        name: newMemberData.fullName,
-        username: newMemberData.username,
-        role: newMemberData.role,
-        age: newMemberData.role === 'Child' ? newMemberData.age : undefined,
-        // We don't store raw pin or hashedPin directly in the local display list for long term
-        // but it's good to know it was processed if debugging.
-        // avatarInitial is purely for display
-        avatarInitial: newMemberData.fullName ? newMemberData.fullName.charAt(0).toUpperCase() : '?'
-      };
-
-      this.familyMembers.push(memberToAddLocally);
-      this.isAddMemberModalVisible = false;
-      this.updateFamilyStats();
     },
     openAddMemberModal() {
       this.isAddMemberModalVisible = true;

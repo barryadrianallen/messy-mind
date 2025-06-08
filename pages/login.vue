@@ -431,6 +431,8 @@ const handleSignup = async () => {
       }
     });
     console.log('[handleSignup] Supabase signUp response:', { data, error });
+    console.log('[handleSignup] Response data.user:', data?.user);
+    console.log('[handleSignup] Response data.session:', data?.session);
 
     if (error) {
       if (error.message.includes('User already registered')) {
@@ -449,7 +451,14 @@ const handleSignup = async () => {
       signupSuccess.value = 'Signup successful! Please check your email to confirm your account.';
       console.log('[handleSignup] Signup successful, success message set.');
       // Optionally clear form or navigate to a 'please-confirm' page
-      // router.push('/please-confirm'); 
+      console.log('[handleSignup] About to attempt navigation to /please-confirm');
+    console.log('[handleSignup] Router object available:', typeof router !== 'undefined' && router !== null);
+    try {
+      router.push('/please-confirm');
+      console.log('[handleSignup] router.push(\'/please-confirm\') was called successfully.');
+    } catch (navError) {
+      console.error('[handleSignup] Error during router.push:', navError);
+    } 
     }
   } catch (err) {
     // This catch block handles unexpected errors not directly from Supabase signUp error object or client-side issues

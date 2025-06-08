@@ -5,6 +5,12 @@
 </template>
 
 <script setup>
+const runtimeConfig = useRuntimeConfig();
+console.log('Runtime Supabase URL from nuxt.config.js:', runtimeConfig.public.supabaseUrl);
+console.log('Runtime Supabase Anon Key from nuxt.config.js:', runtimeConfig.public.supabaseAnonKey);
+
+const supabase = useSupabaseClient();
+console.log('Supabase client instance URL:', supabase.supabaseUrl);
 useHead({
   link: [
     {
